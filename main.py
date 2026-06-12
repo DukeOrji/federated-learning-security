@@ -1,6 +1,6 @@
 #main.py
 from ds import load_cifar10
-from user import User, LabelPoison, WeightMan
+from user import User, LabelPoison, WeightMan, SignFlip
 from server import Server
 
 server = Server()
@@ -9,10 +9,10 @@ user_dataloader, test_loader = load_cifar10()
 users = [
     User(0, user_dataloader[0]),
     User(1, user_dataloader[1]),
-    WeightMan(2, user_dataloader[2])
+    SignFlip(2, user_dataloader[2])
 ]
 
-rng_num = 3
+rng_num = 5
 #initialize multiple rounds - improve accuracy
 for epoch in range(rng_num):
     print(f"\nRound {epoch+1}")

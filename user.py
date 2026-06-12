@@ -127,5 +127,12 @@ class WeightMan(User):
     
 class SignFlip(User):
     def get_weight(self):
-        pass
+        weights = {
+            k: v.clone()
+            for k, v in self.model.state_dict().items()
+        }
+        for key in weights:
+            if weights[key].dtype == torch.float32:
+                weights[key]*= -1
+        return weights
 
