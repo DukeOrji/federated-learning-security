@@ -5,30 +5,48 @@ import torch
 import torch.optim as optim
 from user import norm
 
+
 class Server:
     def __init__(self):
         self.weights = ResNet18_Weights.DEFAULT
         self.global_model = resnet18(weights=None)
         self.global_model.fc = nn.Linear(512, 10)
         self.loss_fn = nn.CrossEntropyLoss()
-
+        self.trust_scores = {
+            0: 1.0,
+            1: 1.0,
+            2: 1.0,
+            3: 1.0,
+            4: 1.0,
+            5: 0.2,
+        }
         
     def broadcast_weights(self):
         return self.global_model.state_dict()
         
     def aggregate(self, user_weights):
+        
+
         avg_weights = {}
         for key in user_weights[0].keys():
+
             if user_weights[0][key].dtype == torch.float32:
-                avg_weights[key] = torch.stack(
-                    [user[key] for user in user_weights],
-                    dim=0
-                ).mean(dim=0)
-                
+                weighted_sum =  0
+                total_trust = 0
+
+                for idx, weights in enumerate(user_weights):
+                    trust = self.trust_scores[idx]
+
+                    weighted_sum += weights[key] * trust
+                    total_trust += trust
+
+                avg_weights[key] = weighted_sum/total_trust #now trust = influence
+
             else:
                 avg_weights[key] = user_weights[0][key]
-        self.global_model.load_state_dict(avg_weights)
-        print("\nAggregation complete...")   
+            
+        print("\nAggregation complete...") 
+        self.global_model.load_state_dict(avg_weights)  
 
 
     def label_poison_evaluate(self, dataloader):
@@ -78,4 +96,4 @@ class Server:
         global_acc = round(correct/total, 2)
             
 
-        return avg_loss, global_acc
+        return avg_loss, global_acc, self.trust_scores

@@ -39,15 +39,16 @@ class User:
         # put model in training mode
         self.model.train()
         losses = []
+        clean_correct = 0 
+        total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            if batch_idx > 3:
-                break
+            """if batch_idx > 10:
+                break"""
 
             pred = self.model(norm(images))
             #track correct clean predictions
-            clean_correct = 0 
-            total = 0
+            
             
 
             pred_labels = pred.argmax(dim=1)
