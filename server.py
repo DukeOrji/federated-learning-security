@@ -9,7 +9,8 @@ from user import norm
 class Server:
     def __init__(self):
         self.weights = ResNet18_Weights.DEFAULT
-        self.global_model = resnet18(weights=None)
+        self.global_model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.global_model = self.model.to(device)
         self.global_model.fc = nn.Linear(512, 10)
         self.loss_fn = nn.CrossEntropyLoss()
         self.trust_scores = {
@@ -18,7 +19,11 @@ class Server:
             2: 1.0,
             3: 1.0,
             4: 1.0,
-            5: 0.2,
+            5: 1.0,
+            6: 1.0,
+            7: 1.0,
+            8: 1.0,
+            9: 1.0
         }
         
     def broadcast_weights(self):
@@ -29,7 +34,8 @@ class Server:
 
         avg_weights = {}
         for key in user_weights[0].keys():
-
+            
+            #get only learneable parameters
             if user_weights[0][key].dtype == torch.float32:
                 weighted_sum =  0
                 total_trust = 0
@@ -58,6 +64,8 @@ class Server:
 
         with torch.no_grad():
             for images, labels in dataloader:
+                images = images.to(device)#send to gpu
+                labels = labels.to(device)
                 pred = self.global_model(norm(images))
                 pred_labels = pred.argmax(dim=1)
                 mask = labels == 0
@@ -84,6 +92,8 @@ class Server:
 
         with torch.no_grad():
             for images, labels in dataloader:
+                images = images.to(device)#send to gpu
+                labels = labels.to(device)
                 pred = self.global_model(norm(images))
                 pred_labels = pred.argmax(dim=1)
 

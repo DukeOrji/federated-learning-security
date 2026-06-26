@@ -29,11 +29,12 @@ class User:
         self.user_id = user_id
         self.dataloader = dataloader
         self.weights = ResNet18_Weights.DEFAULT
-        self.model = resnet18(weights=None)
+        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model = self.model.to(device)
         self.model.fc = nn.Linear(512, 10)
-        self.optim = optim.SGD(self.model.parameters(), lr=1e-3)
+        self.optim = optim.SGD(self.model.parameters(), lr=1e-2)
         self.loss_fn = nn.CrossEntropyLoss()
-        self.eps = 0.3        
+        #self.eps = 0.3        
 
     def train(self):
         # put model in training mode
@@ -43,8 +44,11 @@ class User:
         total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            """if batch_idx > 10:
-                break"""
+            if batch_idx > 33:
+                break
+
+            images = images.to(device)#send to gpu
+            labels = labels.to(device)
 
             pred = self.model(norm(images))
             #track correct clean predictions
@@ -87,6 +91,8 @@ class LabelPoison(User):
         for batch_idx, (images, labels) in enumerate(self.dataloader):
             if batch_idx > 3:
                 break
+            images = images.to(device)#send to gpu
+            labels = labels.to(device)
 
             # create a copy so original labels remain unchanged
             poisoned_labels = labels.clone()
@@ -123,7 +129,7 @@ class WeightMan(User):
         for key in weights:
             #confirm only learned parameters are beign manipulated
             if weights[key].dtype == torch.float32:
-                weights[key]*=1.5
+                weights[key]*=2
         return weights
     
 class SignFlip(User):

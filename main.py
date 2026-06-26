@@ -2,9 +2,23 @@
 from ds import load_cifar10
 from user import User, LabelPoison, WeightMan, SignFlip
 from server import Server
+import pandas as pd
+
+
+device = torch.devcie('cude:0' if torch.cuda.isavailable() else 'cpu')
+
+#saves results
+df = pd.DataFrame()
+results = []
+
+"""df.to_csv(
+    "results/trust_scoring.csv",
+    index=False
+)"""
+
 
 server = Server()
-num_client = 6
+num_client = 10
 user_dataloader, test_loader = load_cifar10(num_client)
 
 #create clients
@@ -14,11 +28,16 @@ users = [
     User(2, user_dataloader[2]),
     User(3, user_dataloader[3]),
     User(4, user_dataloader[4]),
-    SignFlip(5, user_dataloader[5])
+    WeightMan(5, user_dataloader[5]),
+    User(6, user_dataloader[6]),
+    User(7, user_dataloader[7]),
+    User(8, user_dataloader[8]),
+    User(9, user_dataloader[9]),
 ]
 
-rng_num = 7
+rng_num = 10
 #initialize multiple rounds - improve accuracy
+print(server.global_model.parameters().device) #print gpu or cpu
 for epoch in range(rng_num):
     print(f"\nRound {epoch+1}")
     #broadcast global model
@@ -33,7 +52,7 @@ for epoch in range(rng_num):
             user_name = "WeightManipulation" """
         
         if user.user_id == 5:
-            user_name = "SignFlip"
+            user_name = "WeightMan"
         else:
             user_name = user.user_id
 
@@ -56,4 +75,5 @@ for epoch in range(rng_num):
         print("Next round...")
     else:
         print("Experiment Complete.")
-        print(trust_scores)
+
+        print(trust_scores, sep="\n")

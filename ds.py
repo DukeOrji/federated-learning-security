@@ -19,7 +19,7 @@ def load_cifar10(num_client):
     #modify the length of dataset
     small_dataset = Subset(
         cifar_train,
-        range(3000)
+        range(30000)
     )
 
     #classes = cifar_train.classes
