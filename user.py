@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchvision.models import resnet18, ResNet18_Weights
 import torch
 import torch.optim as optim
-device = torch.device('cude:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
 
 #from art.estimators.classification import PyTorchClassifier
 # https://github.com/DukeOrji/federated-learning-security.git
@@ -32,7 +32,7 @@ class User:
         self.weights = ResNet18_Weights.DEFAULT
         self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
         self.model = self.model.to(device)
-        self.model.fc = nn.Linear(512, 10)
+        self.model.fc = nn.Linear(512, 10).to(device)
         self.optim = optim.SGD(self.model.parameters(), lr=1e-2)
         self.loss_fn = nn.CrossEntropyLoss()
         #self.eps = 0.3        

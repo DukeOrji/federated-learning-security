@@ -28,15 +28,15 @@ users = [
     User(1, user_dataloader[1]),
     User(2, user_dataloader[2]),
     User(3, user_dataloader[3]),
-    User(4, user_dataloader[4]),
+    WeightMan(4, user_dataloader[4]),
     WeightMan(5, user_dataloader[5]),
-    User(6, user_dataloader[6]),
+    WeightMan(6, user_dataloader[6]),
     User(7, user_dataloader[7]),
     User(8, user_dataloader[8]),
     User(9, user_dataloader[9]),
 ]
 
-rng_num = 10
+rng_num = 20
 #initialize multiple rounds - improve accuracy
 print(next(server.global_model.parameters()).device) #print gpu or cpu
 for epoch in range(rng_num):
@@ -52,7 +52,8 @@ for epoch in range(rng_num):
         """if user.user_id == 4:
             user_name = "WeightManipulation" """
         
-        if user.user_id == 5:
+        if user.user_id == 4 or user.user_id == 5 or user.user_id == 6:
+
             user_name = "WeightMan"
         else:
             user_name = user.user_id
