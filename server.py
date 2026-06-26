@@ -5,12 +5,12 @@ import torch
 import torch.optim as optim
 from user import norm
 
-
+device = torch.device('cude:0' if torch.cuda.is_available() else 'cpu')
 class Server:
     def __init__(self):
         self.weights = ResNet18_Weights.DEFAULT
         self.global_model = resnet18(weights=ResNet18_Weights.DEFAULT)
-        self.global_model = self.model.to(device)
+        self.global_model = self.global_model.to(device)
         self.global_model.fc = nn.Linear(512, 10)
         self.loss_fn = nn.CrossEntropyLoss()
         self.trust_scores = {

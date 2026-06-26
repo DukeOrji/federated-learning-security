@@ -1,11 +1,12 @@
 #main.py
+import torch
 from ds import load_cifar10
 from user import User, LabelPoison, WeightMan, SignFlip
 from server import Server
 import pandas as pd
+from server import device
 
 
-device = torch.devcie('cude:0' if torch.cuda.isavailable() else 'cpu')
 
 #saves results
 df = pd.DataFrame()
@@ -37,7 +38,7 @@ users = [
 
 rng_num = 10
 #initialize multiple rounds - improve accuracy
-print(server.global_model.parameters().device) #print gpu or cpu
+print(next(server.global_model.parameters()).device) #print gpu or cpu
 for epoch in range(rng_num):
     print(f"\nRound {epoch+1}")
     #broadcast global model
