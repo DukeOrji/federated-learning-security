@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 from user import norm
 
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class Server:
     def __init__(self):
         self.weights = ResNet18_Weights.DEFAULT
@@ -18,9 +18,9 @@ class Server:
             1: 1.0,
             2: 1.0,
             3: 1.0,
-            4: 0.2,
-            5: 0.2,
-            6: 0.2,
+            4: 1.0,
+            5: 1.0,
+            6: 1.0,
             7: 1.0,
             8: 1.0,
             9: 1.0
@@ -29,30 +29,76 @@ class Server:
     def broadcast_weights(self):
         return self.global_model.state_dict()
         
-    def aggregate(self, user_weights):
-        
+    def aggregate(self, user_weights, threshold=100):
+        clip_threshold = 50
+        # =========================
+        # STEP 1: Update trust scores
+        # =========================
+        for idx, weights in enumerate(user_weights):
 
+            total_dist = 0
+
+            for key in weights.keys():
+
+                # Ignore non-learnable parameters
+                if weights[key].dtype == torch.float32:
+
+                    
+                    total_dist += torch.norm(weights[key] - self.global_model.state_dict()[key]).item()
+                    
+
+            # Update trust based on total distance
+            if total_dist > threshold:
+                self.trust_scores[idx] *= 0.9
+
+            else:
+                self.trust_scores[idx] = min(
+                    self.trust_scores[idx] + 0.02,
+                    1.0
+                )
+
+            print(
+                f"Client {idx}: Distance={total_dist:.2f}, "
+                f"Trust={self.trust_scores[idx]:.3f}"
+            )
+
+        # =========================
+        # STEP 2: Weighted aggregation
+        # =========================
         avg_weights = {}
+
         for key in user_weights[0].keys():
-            
-            #get only learneable parameters
+
             if user_weights[0][key].dtype == torch.float32:
-                weighted_sum =  0
+
+                weighted_sum = torch.zeros_like(user_weights[0][key])
                 total_trust = 0
 
                 for idx, weights in enumerate(user_weights):
-                    trust = self.trust_scores[idx]
 
-                    weighted_sum += weights[key] * trust
+                    trust = self.trust_scores[idx]
+                    #compute update
+                    update = weights[key] - self.global_model.state_dict()[key]
+
+                    norm = torch.norm(update)
+                    #clip update
+                    if norm > clip_threshold:
+                        update = update * (clip_threshold/norm)
+
+                    #aggregate clipped update
+                    weighted_sum += (self.global_model.state_dict()[key] + update) * trust #prevents malicious clients from dominating purely through magnitude.
                     total_trust += trust
 
-                avg_weights[key] = weighted_sum/total_trust #now trust = influence
+                avg_weights[key] = weighted_sum / max(total_trust, 1e-8)
 
             else:
+                # Copy non-trainable parameters directly
                 avg_weights[key] = user_weights[0][key]
-            
-        print("\nAggregation complete...") 
-        self.global_model.load_state_dict(avg_weights)  
+
+        print("\nTrust Scores:", self.trust_scores)
+        print("\nAggregation complete...")
+
+        self.global_model.load_state_dict(avg_weights)
 
 
     def label_poison_evaluate(self, dataloader):

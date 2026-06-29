@@ -23,12 +23,13 @@ num_client = 10
 user_dataloader, test_loader = load_cifar10(num_client)
 
 #create clients
+malicious_users = {4, 5, 6}
 users = [
     User(0, user_dataloader[0]),
     User(1, user_dataloader[1]),
     User(2, user_dataloader[2]),
     User(3, user_dataloader[3]),
-    WeightMan(4, user_dataloader[4]),
+    SignFlip(4, user_dataloader[4]),
     WeightMan(5, user_dataloader[5]),
     WeightMan(6, user_dataloader[6]),
     User(7, user_dataloader[7]),
@@ -36,7 +37,7 @@ users = [
     User(9, user_dataloader[9]),
 ]
 
-rng_num = 20
+rng_num = 5
 #initialize multiple rounds - improve accuracy
 print(next(server.global_model.parameters()).device) #print gpu or cpu
 for epoch in range(rng_num):
@@ -52,9 +53,9 @@ for epoch in range(rng_num):
         """if user.user_id == 4:
             user_name = "WeightManipulation" """
         
-        if user.user_id == 4 or user.user_id == 5 or user.user_id == 6:
+        if user.user_id in malicious_users:
 
-            user_name = "WeightMan"
+            user_name = "Malicious"
         else:
             user_name = user.user_id
 
@@ -78,4 +79,3 @@ for epoch in range(rng_num):
     else:
         print("Experiment Complete.")
 
-        print(trust_scores, sep="\n")

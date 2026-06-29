@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchvision.models import resnet18, ResNet18_Weights
 import torch
 import torch.optim as optim
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 #from art.estimators.classification import PyTorchClassifier
 # https://github.com/DukeOrji/federated-learning-security.git
@@ -45,7 +45,7 @@ class User:
         total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            if batch_idx > 33:
+            if batch_idx > 10:
                 break
 
             images = images.to(device)#send to gpu
