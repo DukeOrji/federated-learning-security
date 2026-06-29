@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchvision.models import resnet18, ResNet18_Weights
 import torch
 import torch.optim as optim
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+from config import device
 
 #from art.estimators.classification import PyTorchClassifier
 # https://github.com/DukeOrji/federated-learning-security.git
@@ -24,7 +24,7 @@ norm = Normalize(
     std=[0.229, 0.224, 0.225]
 )
 
-client_results = []
+
 class User:
     def __init__(self, user_id, dataloader):
         self.user_id = user_id
@@ -45,7 +45,7 @@ class User:
         total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            if batch_idx > 10:
+            if batch_idx > 64:
                 break
 
             images = images.to(device)#send to gpu
@@ -77,6 +77,13 @@ class User:
         return self.model.state_dict()
     
     def set_weight(self, new_weights):
+        #store a copy of the global model
+        self.global_weights = {
+            k: v.clone()
+            for k, v in new_weights.items()
+        }
+        
+        #load the weights into the local model
         self.model.load_state_dict(new_weights)
 
 class LabelPoison(User):
@@ -90,7 +97,7 @@ class LabelPoison(User):
         total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            if batch_idx > 3:
+            if batch_idx > 2:
                 break
             images = images.to(device)#send to gpu
             labels = labels.to(device)
@@ -141,6 +148,9 @@ class SignFlip(User):
         }
         for key in weights:
             if weights[key].dtype == torch.float32:
-                weights[key]*= -1
+                update = (weights[key] - self.global_weights[key])
+                mal_update = -3 * update
+                weights[key] = (self.global_weights[key] + mal_update)
+
         return weights
 

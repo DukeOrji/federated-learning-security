@@ -4,6 +4,9 @@ from torchvision.models import resnet18, ResNet18_Weights
 import torch
 import torch.optim as optim
 from user import norm
+import numpy as np
+from collections import defaultdict
+from config import device
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class Server:
@@ -13,52 +16,62 @@ class Server:
         self.global_model = self.global_model.to(device)
         self.global_model.fc = nn.Linear(512, 10).to(device)
         self.loss_fn = nn.CrossEntropyLoss()
+
+        self.client_distances = defaultdict(list)
+        self.distance_history = defaultdict(list)
         self.trust_scores = {
-            0: 1.0,
-            1: 1.0,
-            2: 1.0,
-            3: 1.0,
-            4: 1.0,
-            5: 1.0,
-            6: 1.0,
-            7: 1.0,
-            8: 1.0,
-            9: 1.0
+            i: 1.0 for i in range(10)
         }
         
     def broadcast_weights(self):
         return self.global_model.state_dict()
         
-    def aggregate(self, user_weights, threshold=100):
+    def aggregate(self, user_weights):
+
+        round_distances = []
         clip_threshold = 50
+
         # =========================
-        # STEP 1: Update trust scores
+        # STEP 1A: Compute distances
         # =========================
         for idx, weights in enumerate(user_weights):
 
-            total_dist = 0 #measure difference between client model and global model
+            total_dist = 0
 
             for key in weights.keys():
 
-                # Ignore non-learnable parameters
                 if weights[key].dtype == torch.float32:
 
-                    
-                    total_dist += torch.norm(weights[key] - self.global_model.state_dict()[key]).item()
-                    
+                    total_dist += torch.norm(
+                        weights[key]
+                        - self.global_model.state_dict()[key]
+                    ).item()
 
-            # Update trust based on total distance
-            if total_dist > threshold:
-                self.trust_scores[idx] *= 0.9
+            self.client_distances[idx] = total_dist
+            round_distances.append(total_dist)
 
-            else: 
+        # compute population statistic
+        median_dist = np.median(round_distances)
+
+        # =========================
+        # STEP 1B: Update trust
+        # =========================
+        for idx, total_dist in self.client_distances.items():
+
+            self.distance_history[idx].append(total_dist)
+
+            if total_dist > 2 * median_dist:
+                self.trust_scores[idx] *= 0.5
+
+            else:
                 self.trust_scores[idx] = min(
-                    self.trust_scores[idx] + 0.02, #reward honesty up to 1.0
+                    self.trust_scores[idx] + 0.02,
                     1.0
                 )
 
             print(
-                f"Client {idx}: Distance={total_dist:.2f}, "
+                f"Client {idx}: "
+                f"Distance={total_dist:.2f}, "
                 f"Trust={self.trust_scores[idx]:.3f}"
             )
 
@@ -93,7 +106,7 @@ class Server:
 
             else:
                 # Copy non-trainable parameters directly
-                avg_weights[key] = user_weights[0][key]
+                avg_weights[key] = user_weights[0][key].clone()
 
         print("\nTrust Scores:", self.trust_scores)
         print("\nAggregation complete...")
