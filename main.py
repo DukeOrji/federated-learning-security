@@ -8,14 +8,8 @@ from server import device
 
 
 
-#saves results
-df = pd.DataFrame()
+client_results = []
 results = []
-
-"""df.to_csv(
-    "results/trust_scoring.csv",
-    index=False
-)"""
 
 
 server = Server()
@@ -50,6 +44,16 @@ for epoch in range(rng_num):
         user.set_weight(global_weights)
         loss, acc = user.train()
 
+        #save client updates
+        client_results.append({
+            "Round": epoch + 1,
+            "User": user.user_id,
+            "client_loss": loss,
+            "client_acc": acc,
+            "trust_score": server.trust_scores[user.user_id],
+            "malicious": user.user_id in [4,5,6]
+        })
+
         """if user.user_id == 4:
             user_name = "WeightManipulation" """
         
@@ -70,6 +74,15 @@ for epoch in range(rng_num):
     global_loss, global_acc, trust_scores = server.weight_man_evaluate(test_loader)
     print(f"\nGlobal Loss: {global_loss}  Global Acc: {global_acc}")
 
+    for client_id, trust in trust_scores.items():
+        results.append({
+            "Round": epoch + 1,
+            "User": client_id,
+            "Trust score": trust,
+            "global loss": global_loss,
+            "global accuracy": global_acc
+        })
+
     new_global_weights = server.broadcast_weights()
     for user in users:
         user.set_weight(new_global_weights)
@@ -79,3 +92,16 @@ for epoch in range(rng_num):
     else:
         print("Experiment Complete.")
 
+#save results
+global_df = pd.DataFrame(results)
+client_df = pd.DataFrame(client_results)
+
+client_df.to_csv(
+    "results/client_updates.csv",
+    index=False
+)
+
+global_df.to_csv(
+    "results/trust_scoring.csv",
+    index=False
+)

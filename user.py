@@ -24,7 +24,7 @@ norm = Normalize(
     std=[0.229, 0.224, 0.225]
 )
 
-
+client_results = []
 class User:
     def __init__(self, user_id, dataloader):
         self.user_id = user_id

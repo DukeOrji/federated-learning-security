@@ -36,7 +36,7 @@ class Server:
         # =========================
         for idx, weights in enumerate(user_weights):
 
-            total_dist = 0
+            total_dist = 0 #measure difference between client model and global model
 
             for key in weights.keys():
 
@@ -51,9 +51,9 @@ class Server:
             if total_dist > threshold:
                 self.trust_scores[idx] *= 0.9
 
-            else:
+            else: 
                 self.trust_scores[idx] = min(
-                    self.trust_scores[idx] + 0.02,
+                    self.trust_scores[idx] + 0.02, #reward honesty up to 1.0
                     1.0
                 )
 
@@ -83,7 +83,7 @@ class Server:
                     norm = torch.norm(update)
                     #clip update
                     if norm > clip_threshold:
-                        update = update * (clip_threshold/norm)
+                        update = update * (clip_threshold/norm) # prevents large malicious updates from dominating FedAvg
 
                     #aggregate clipped update
                     weighted_sum += (self.global_model.state_dict()[key] + update) * trust #prevents malicious clients from dominating purely through magnitude.
