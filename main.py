@@ -1,7 +1,7 @@
 #main.py
 import torch
 from ds import load_cifar10
-from user import User, LabelPoison, WeightMan, SignFlip
+from user import User, LabelFlip, WeightMan, SignFlip
 from server import Server
 import pandas as pd
 from server import device
@@ -12,31 +12,34 @@ client_results = []
 results = []
 
 
-server = Server()
+
 num_client = 10
+server = Server(num_client)
 user_dataloader, test_loader = load_cifar10(num_client)
 
 #create clients
 attack_type = {
-    4: "SignFlip",
-    5: "WeightMan",
-    6: "SignFlip"
+    1: "SF",
+    2: "WM",
+    3: "SF",
+    4: "WM",
+    5: "SF"
 }
 
 users = [
     User(0, user_dataloader[0]),
-    User(1, user_dataloader[1]),
-    User(2, user_dataloader[2]),
-    User(3, user_dataloader[3]),
-    SignFlip(4, user_dataloader[4]),
-    WeightMan(5, user_dataloader[5]),
-    SignFlip(6, user_dataloader[6]),
+    SignFlip(1, user_dataloader[1]),
+    WeightMan(2, user_dataloader[2]),
+    SignFlip(3, user_dataloader[3]),
+    WeightMan(4, user_dataloader[4]),
+    SignFlip(5, user_dataloader[5]),
+    User(6, user_dataloader[6]),
     User(7, user_dataloader[7]),
     User(8, user_dataloader[8]),
-    User(9, user_dataloader[9]),
+    User(9, user_dataloader[9])
 ]
 
-rng_num = 25
+rng_num = 20
 #initialize multiple rounds - improve accuracy
 print(next(server.global_model.parameters()).device) #print gpu or cpu
 for epoch in range(rng_num):
@@ -59,7 +62,7 @@ for epoch in range(rng_num):
             "User": user.user_id,
             "client_loss": loss,
             "client_acc": acc,
-            "malicious": user.user_id in [4,5,6]
+            "malicious": user.user_id in [1,2,3,4,5]
         })
 
     user_weights = [

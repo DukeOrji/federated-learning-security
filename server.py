@@ -8,9 +8,9 @@ import numpy as np
 from collections import defaultdict
 from config import device
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 class Server:
-    def __init__(self):
+    def __init__(self, num_client):
         self.weights = ResNet18_Weights.DEFAULT
         self.global_model = resnet18(weights=ResNet18_Weights.DEFAULT)
         self.global_model = self.global_model.to(device)
@@ -20,19 +20,22 @@ class Server:
         self.client_distances = defaultdict(list)
         self.distance_history = defaultdict(list)
         self.trust_scores = {
-            i: 1.0 for i in range(10)
+            i: 1.0 for i in range(num_client)
         }
         
     def broadcast_weights(self):
         return self.global_model.state_dict()
         
     def aggregate(self, user_weights):
+        MODERATE = 1.0
+        MILD = 0.5
+        SEVERE = 2.0
 
         round_distances = []
         clip_threshold = 50
 
         # =========================
-        # STEP 1A: Compute distances
+        # STEP 1: Compute distances
         # =========================
         for idx, weights in enumerate(user_weights):
 
@@ -51,17 +54,24 @@ class Server:
             round_distances.append(total_dist)
 
         # compute population statistic
-        median_dist = np.median(round_distances)
+        avg_dist = np.mean(round_distances)
 
         # =========================
-        # STEP 1B: Update trust
+        # STEP 2: Update trust
         # =========================
         for idx, total_dist in self.client_distances.items():
 
             self.distance_history[idx].append(total_dist)
 
-            if total_dist > 2 * median_dist:
-                self.trust_scores[idx] *= 0.5
+            # Compute relative update distance for adaptive trust scoring
+            relative_distance = total_dist / avg_dist
+
+            if relative_distance > SEVERE:
+                self.trust_scores[idx] = max(self.trust_scores[idx] * 0.5, 1e-3)
+            elif relative_distance > MODERATE:
+                self.trust_scores[idx] = max(self.trust_scores[idx] * 0.6, 1e-3)
+            elif relative_distance > MILD:
+                self.trust_scores[idx] = max(self.trust_scores[idx] * 0.7, 1e-3)
 
             else:
                 self.trust_scores[idx] = min(
@@ -72,11 +82,11 @@ class Server:
             print(
                 f"Client {idx}: "
                 f"Distance={total_dist:.2f}, "
-                f"Trust={self.trust_scores[idx]:.3f}"
+                f"Trust={self.trust_scores[idx]:.3f}, "
             )
 
         # =========================
-        # STEP 2: Weighted aggregation
+        # STEP 3: Weighted aggregation
         # =========================
         avg_weights = {}
 
@@ -109,6 +119,7 @@ class Server:
                 avg_weights[key] = user_weights[0][key].clone()
 
         print("\nTrust Scores:", self.trust_scores)
+        
         print("\nAggregation complete...")
 
         self.global_model.load_state_dict(avg_weights)
