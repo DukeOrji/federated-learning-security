@@ -1,7 +1,8 @@
 #main.py
 import torch
 from ds import load_cifar10
-from user import User, LabelFlip, WeightMan, SignFlip
+from user import User
+from attack import LabelFlip, WeightMan, SignFlip
 from server import Server
 import pandas as pd
 from server import device
@@ -19,20 +20,17 @@ user_dataloader, test_loader = load_cifar10(num_client)
 
 #create clients
 attack_type = {
-    1: "SF",
-    2: "WM",
-    3: "SF",
-    4: "WM",
-    5: "SF"
+    2: "LF",
+    3: "LF"
 }
 
 users = [
     User(0, user_dataloader[0]),
-    SignFlip(1, user_dataloader[1]),
-    WeightMan(2, user_dataloader[2]),
-    SignFlip(3, user_dataloader[3]),
-    WeightMan(4, user_dataloader[4]),
-    SignFlip(5, user_dataloader[5]),
+    User(1, user_dataloader[1]),
+    LabelFlip(2, user_dataloader[2]),
+    LabelFlip(3, user_dataloader[3]),
+    User(4, user_dataloader[4]),
+    User(5, user_dataloader[5]),
     User(6, user_dataloader[6]),
     User(7, user_dataloader[7]),
     User(8, user_dataloader[8]),
@@ -62,7 +60,7 @@ for epoch in range(rng_num):
             "User": user.user_id,
             "client_loss": loss,
             "client_acc": acc,
-            "malicious": user.user_id in [1,2,3,4,5]
+            "malicious": user.user_id in [2,3]
         })
 
     user_weights = [
@@ -73,15 +71,15 @@ for epoch in range(rng_num):
     server.aggregate(user_weights)
     
 
-    global_loss, global_acc, trust_scores = server.weight_man_evaluate(test_loader)
-    print(f"\nGlobal Loss: {global_loss}  Global Acc: {global_acc}")
+    pr, global_acc, trust_scores = server.label_poison_evaluate(test_loader)
+    print(f"\nPoison Rate: {pr}  Global Acc: {global_acc}")
 
     for client_id, trust in trust_scores.items():
         results.append({
             "Round": epoch + 1,
             "User": client_id,
             "Trust score": trust,
-            "global loss": global_loss,
+            "global loss": pr,
             "global accuracy": global_acc
         })
 

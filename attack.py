@@ -2,6 +2,8 @@ from user import User
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from config import device
+from user import norm
 
 class InputNoise(User):
     pass
@@ -26,8 +28,8 @@ class LabelFlip(User):
             poisoned_labels = labels.clone()
 
             # label poisoning attack:
-            # change every class 0 label into class 1
-            poisoned_labels[labels==0] = 1
+            # Shift every label to the next class
+            poisoned_labels[:] = (labels + 1) % 10
 
             pred = self.model(norm(images))
             loss = self.loss_fn(pred, poisoned_labels)

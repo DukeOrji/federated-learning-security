@@ -27,6 +27,9 @@ class Server:
         return self.global_model.state_dict()
         
     def aggregate(self, user_weights):
+        # 0 -- OFF   1 -- ON
+        trust_switch = 0 
+
         MODERATE = 1.0
         MILD = 0.5
         SEVERE = 2.0
@@ -63,9 +66,13 @@ class Server:
 
             self.distance_history[idx].append(total_dist)
 
-            # Compute relative update distance for adaptive trust scoring
-            relative_distance = total_dist / avg_dist
+            #toggle trust on or off
+            if trust_switch == 0:
+                relative_distance = 0.2
+            elif trust_switch == 1:
+                relative_distance = total_dist / avg_dist
 
+            # Compute relative update distance for adaptive trust scoring
             if relative_distance > SEVERE:
                 self.trust_scores[idx] = max(self.trust_scores[idx] * 0.5, 1e-3)
             elif relative_distance > MODERATE:
@@ -139,19 +146,23 @@ class Server:
                 pred = self.global_model(norm(images))
                 pred_labels = pred.argmax(dim=1)
                 mask = labels == 0
+                mask2 = labels == 1
 
                 #check for changes in the global model parameters
                 correct += (pred_labels[mask] == labels[mask]).sum().item() 
+                correct += (pred_labels[mask2] == labels[mask2]).sum().item() 
 
                 zero_to_one += (pred_labels[mask] == 1).sum().item()
+                zero_to_one += (pred_labels[mask2] == 0).sum().item()
                 class0_total += mask.sum().item()
+                class0_total += mask2.sum().item()
 
         #How often does the global model classify class 0 as class 1?
         poison_rate = round(zero_to_one/class0_total, 2)
         #How often does the global model correctly classify class 0?
         class_acc = round(correct/class0_total, 2)
 
-        return poison_rate, class_acc
+        return poison_rate, class_acc, self.trust_scores
     
     def weight_man_evaluate(self, dataloader):
         losses=[]
