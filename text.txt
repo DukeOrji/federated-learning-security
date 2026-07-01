@@ -1,2 +1,0 @@
-
-We compared mean- and median-based thresholding. Under our attack scenarios, the mean produced fewer false positives while still effectively identifying malicious clients.
