@@ -1,5 +1,6 @@
 data/
 venv/
 results/
+text.txt
 __pycache__/
 *.pyc

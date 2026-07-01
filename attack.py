@@ -19,7 +19,7 @@ class LabelFlip(User):
         total = 0
 
         for batch_idx, (images, labels) in enumerate(self.dataloader):
-            if batch_idx > 2:
+            if batch_idx > 20:
                 break
             images = images.to(device)#send to gpu
             labels = labels.to(device)

@@ -21,7 +21,9 @@ user_dataloader, test_loader = load_cifar10(num_client)
 #create clients
 attack_type = {
     2: "LF",
-    3: "LF"
+    3: "LF",
+    5: "WM",
+    7: "WM"
 }
 
 users = [
@@ -30,9 +32,9 @@ users = [
     LabelFlip(2, user_dataloader[2]),
     LabelFlip(3, user_dataloader[3]),
     User(4, user_dataloader[4]),
-    User(5, user_dataloader[5]),
+    WeightMan(5, user_dataloader[5]),
     User(6, user_dataloader[6]),
-    User(7, user_dataloader[7]),
+    WeightMan(7, user_dataloader[7]),
     User(8, user_dataloader[8]),
     User(9, user_dataloader[9])
 ]
@@ -60,7 +62,7 @@ for epoch in range(rng_num):
             "User": user.user_id,
             "client_loss": loss,
             "client_acc": acc,
-            "malicious": user.user_id in [2,3]
+            "malicious": user.user_id in [2,3,5,7]
         })
 
     user_weights = [
